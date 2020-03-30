@@ -59,13 +59,14 @@
         },
         "anfPoolTier": {
             "type": "String",
-                "allowedValues": [
-                    "Standard",
-                    "Premium",
-                    "Ultra"
-                ],
+            "defaultValue": "Premium",
+            "allowedValues": [
+                "Standard",
+                "Premium",
+                "Ultra"
+            ],
             "metadata": {
-                "description": "Pricing tier of Azure NetApp Files Capacity Pool"
+                "description": "Performance tier of Azure NetApp Files Capacity Pool"
             }
         },
         "anfPoolSize": {
