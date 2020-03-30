@@ -15,7 +15,7 @@
 
 ## Deploy
 
-[![Click to deploy template on Azure](http://azuredeploy.net/deploybutton.png "Click to deploy template on Azure")](https%3A%2F%2Fraw.githubusercontent.com%2Fhambster%2Farmgallery%2Ffeature%2Fanf%2Fazure-netapp-files%2Ftemplate.json)
+[![Click to deploy template on Azure](http://azuredeploy.net/deploybutton.png "Click to deploy template on Azure")](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhambster%2Farmgallery%2Ffeature%2Fanf%2Fazure-netapp-files%2Ftemplate.json)
 
 ## Parameters
 
