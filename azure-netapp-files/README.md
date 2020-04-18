@@ -13,6 +13,10 @@
     - Inbound traffic from `Internet` was `denied` while provisioning
 - A Azure NetApp Files account, capacity pool and volume
 
+## Architecture Diagram
+
+![Diagram](anf.png)
+
 ## Deploy
 
 [![Click to deploy template on Azure](http://azuredeploy.net/deploybutton.png "Click to deploy template on Azure")](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhambster%2Farmgallery%2Fmaster%2Fazure-netapp-files%2Ftemplate.json)
