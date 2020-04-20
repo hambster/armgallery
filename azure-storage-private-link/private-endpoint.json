@@ -1,0 +1,52 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  	"contentVersion": "1.0.0.0",
+  	"parameters": {
+    	"privateEndpointName": {
+      		"type": "string"
+    	},
+    	"privateStorageId": {
+      		"type": "string"
+    	},
+    	"privateEndpointSubnetId": {
+      		"type": "string"
+    	}
+  	},
+  	"variables": {
+  	},
+  	"resources": [
+        {
+            "apiVersion": "2019-11-01",
+            "name": "[parameters('privateEndpointName')]",
+            "type": "Microsoft.Network/privateEndpoints",
+            "location": "[resourceGroup().Location]",
+			"dependsOn": [
+			],
+            "properties": {
+                "privateLinkServiceConnections": [
+                    {
+                        "name": "[parameters('privateEndpointName')]",
+                        "properties": {
+                            "privateLinkServiceId": "[parameters('privateStorageId')]",
+                            "groupIds": [
+                                "blob"
+                            ]
+                        }
+                    }
+                ],
+                "manualPrivateLinkServiceConnections": [],
+                "subnet": {
+                    "id": "[parameters('privateEndpointSubnetId')]"
+                }
+            }
+        }
+  	],
+  	"outputs": {
+    	"storageNicId":{
+      		"type":"string",
+      		"value": "[reference(resourceId('Microsoft.Network/privateEndpoints', parameters('privateEndpointName')), '2019-11-01').networkInterfaces[0].id]"
+    	}
+  	},
+  	"functions": [
+  	]
+}

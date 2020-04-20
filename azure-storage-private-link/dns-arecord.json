@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  	"contentVersion": "1.0.0.0",
+  	"parameters": {
+        "privateEndpointName": {
+            "type": "string"
+        },
+    	"privateStorageNicId": {
+      		"type": "string"
+    	},
+    	"privateDnsZoneName": {
+      		"type": "string"
+    	},
+    	"storageAccountName": {
+      		"type": "string"
+    	}
+  	},
+  	"resources": [
+        {
+            "type": "Microsoft.Network/privateDnsZones/A",
+            "name": "[concat(parameters('privateDnsZoneName'),'/', parameters('storageAccountName'))]",
+            "location": "global",
+            "apiVersion": "2018-09-01",
+            "properties": {
+                "aRecords": [
+                    {"ipv4Address": "[reference(parameters('privateStorageNicId'), '2019-11-01').ipConfigurations[0].properties.privateIPAddress]"}
+                ],
+                "ttl": 500
+            }
+        }
+  	],
+  	"outputs": {
+  	},
+  	"functions": [
+  	]
+}

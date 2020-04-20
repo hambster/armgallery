@@ -1,0 +1,318 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmNSGName": {
+            "type": "String",
+            "defaultValue": "vm-nsg",
+            "metadata": {
+                "description": "Name of NSG for subnet to deply VMs"
+            }
+        },
+        "privateLinkNSGName": {
+            "type": "String",
+            "defaultValue": "pl-nsg",
+            "metadata": {
+                "description": "Name of NSG for subnet to deply Private Link"
+            }
+        },
+        "vnetName": {
+            "type": "String",
+            "defaultValue": "test-vnet",
+            "metadata": {
+                "description": "Name of Virtual Network to deploy"
+            }
+        },
+        "vnetAddressSpace": {
+            "type": "String",
+            "defaultValue": "192.168.0.0/16",
+            "metadata": {
+                "description": "Address space for VNet"
+            }
+        },
+        "vmSubnetName": {
+            "type": "String",
+            "defaultValue": "vm",
+            "metadata": {
+                "description": "Name of subnet to deploy VMs in VNet"
+            }
+        },
+        "vmSubnetAddressPrefix": {
+            "defaultValue": "192.168.1.0/24",
+            "type": "String",
+            "metadata": {
+                "description": "Address prefix for vm subnet"
+            }
+        },
+        "privateLinkSubnetName": {
+            "type": "String",
+            "defaultValue": "pl",
+            "metadata": {
+                "description": "Name of subnet to deploy Private Link"
+            }
+        },
+        "privateLinkSubnetAddressPrefix": {
+            "type": "String",
+            "defaultValue": "192.168.2.0/24",
+            "metadata": {
+                "description": "Address prefix for the subnet to deploy Private Link"
+            }
+        },
+        "storageAccountName": {
+            "type": "String",
+            "defaultValue": "w0418plcc",
+            "metadata": {
+                "description": "Name of Azure Storage Account"
+            }
+        },
+        "privateDNSZoneName": {
+            "type": "String",
+            "defaultValue": "privatelink.blob.core.windows.net",
+            "metadata": {
+                "description": "Name of private DNS zone suffix (e.g., demo.azure-internal)"
+            }
+        },
+        "privateEndpointName": {
+            "type": "String",
+            "defaultValue": "w0418plccpe",
+            "metadata": {
+                "description": "Name of private endpoint service"
+            }
+        }
+    },
+    "variables": {
+        "privateEndpointTemplateURL": "[uri(deployment().properties.templateLink.uri, 'private-endpoint.json')]",
+        "dnsARecordTemplateURL": "[uri(deployment().properties.templateLink.uri, 'dns-arecord.json')]",
+        "privateStorageId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+        "privateEndpointSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('privateLinkSubnetName'))]",
+        "privateEndpointName": "[parameters('privateEndpointName')]",
+        "dnsARecordDeploy": "[concat(parameters('privateEndpointName'), '-arecord-deploy')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "tags": {},
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Deny"
+                },
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "enabled": true
+                        },
+                        "blob": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot",
+                "supportsHttpsTrafficOnly": true,
+                "largeFileSharesState": "Disabled"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "name": "[parameters('vmNSGName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
+            ],
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "DenyInboundInternet",
+                        "properties": {
+                          "description": "Deny all Internet inbound traffic",
+                          "protocol": "*",
+                          "sourcePortRange": "*",
+                          "destinationPortRange": "*",
+                          "sourceAddressPrefix": "Internet",
+                          "destinationAddressPrefix": "*",
+                          "access": "Deny",
+                          "priority": 123,
+                          "direction": "Inbound"
+                        }
+                    }
+                ]
+            },
+            "tags": {}
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "name": "[parameters('privateLinkNSGName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
+            ],
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "DenyInboundInternet",
+                        "properties": {
+                          "description": "Deny all Internet inbound traffic",
+                          "protocol": "*",
+                          "sourcePortRange": "*",
+                          "destinationPortRange": "*",
+                          "sourceAddressPrefix": "Internet",
+                          "destinationAddressPrefix": "*",
+                          "access": "Deny",
+                          "priority": 123,
+                          "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "DenyOutboundInternet",
+                        "properties": {
+                          "description": "Deny all Internet outbound traffic",
+                          "protocol": "*",
+                          "sourcePortRange": "*",
+                          "destinationPortRange": "*",
+                          "sourceAddressPrefix": "*",
+                          "destinationAddressPrefix": "Internet",
+                          "access": "Deny",
+                          "priority": 200,
+                          "direction": "Outbound"
+                        }
+                    }
+                ]
+            },
+            "tags": {}
+        },
+        {
+            "type": "Microsoft.Network/VirtualNetworks",
+            "apiVersion": "2019-04-01",
+            "name": "[parameters('vnetName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('vmNSGName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('privateLinkNSGName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vnetAddressSpace')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('vmSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('vmSubnetAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('vmNSGName'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[parameters('privateLinkSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('privateLinkSubnetAddressPrefix')]",
+                            "delegations": [],
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('privateLinkNSGName'))]"
+                            }
+                        }
+                    }
+                ],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "name": "[variables('privateEndpointName')]",
+              "dependsOn": [
+                "[parameters('privateDNSZoneName')]"
+              ],
+            "properties": {
+                "mode": "Incremental",
+                "parameters":{
+                    "privateEndpointName": {
+                        "value": "[variables('privateEndpointName')]"
+                    },
+                    "privateStorageId": {
+                        "value": "[variables('privateStorageId')]"
+                    },
+                    "privateEndpointSubnetId": {
+                        "value": "[variables('privateEndpointSubnetId')]"
+                    }
+                },
+                "templateLink":{
+                      "uri": "[variables('privateEndpointTemplateURL')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "name": "[variables('dnsARecordDeploy')]",
+              "dependsOn": [
+                "[variables('privateEndpointName')]"
+              ],
+            "properties": {
+                "mode": "Incremental",
+                "parameters":{
+                    "privateEndpointName": {
+                        "value": "[variables('privateEndpointName')]"
+                    },
+                    "privateDnsZoneName": {
+                        "value": "[parameters('privateDNSZoneName')]"
+                    },
+                    "privateStorageNicId": {
+                        "value": "[reference(variables('privateEndpointName')).outputs.storageNicId.value]"
+                    },
+                    "storageAccountName": {
+                        "value": "[parameters('storageAccountName')]"
+                    }
+                },
+                "templateLink":{
+                      "uri": "[variables('dnsARecordTemplateURL')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2018-09-01",
+            "name": "[parameters('privateDNSZoneName')]",
+            "location": "global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/VirtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2018-09-01",
+            "name": "[concat(parameters('privateDNSZoneName'), '/', parameters('vnetName'))]",
+            "location": "global",
+            "dependsOn": [
+                "[variables('privateEndpointName')]"
+            ],
+            "properties": {
+                "virtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                },
+                "registrationEnabled": false
+            }
+        }
+    ]
+}
